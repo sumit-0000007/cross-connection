@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Callbreak 10-Round Counter</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; color: var(--primary); }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; margin-bottom: 10px; }
+        .round-info { text-align: center; font-weight: bold; color: var(--accent); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background: var(--accent); color: white; }
+        .player-name-input { background: transparent; border: none; color: white; text-align: center; font-weight: bold; width: 80px; border-bottom: 1px dashed #fff; }
+        input[type="number"] { width: 45px; padding: 3px; border: 1px solid #ccc; border-radius: 4px; }
+        .total-row { background: #f8f9fa; font-size: 1.1rem; font-weight: bold; }
+        .winner { background: #ffd700 !important; color: #000; transition: 0.5s; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { cursor: pointer; border: none; border-radius: 8px; padding: 12px; font-weight: bold; transition: 0.2s; }
+        .btn-add { background: var(--success); color: white; }
+        .btn-reset { background: var(--danger); color: white; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Callbreak 5-Player Pro</h2>
+    <div class="round-info" id="roundTracker">Round: 1 / 10</div>
+    
+    <table id="scoreTable">
+        <thead>
+            <tr>
+                <th>Rnd</th>
+                <th><input type="text" class="player-name-input" id="n1" value="Player 1" onchange="saveToCookies()"></th>
+                <th><input type="text" class="player-name-input" id="n2" value="Player 2" onchange="saveToCookies()"></th>
+                <th><input type="text" class="player-name-input" id="n3" value="Player 3" onchange="saveToCookies()"></th>
+                <th><input type="text" class="player-name-input" id="n4" value="Player 4" onchange="saveToCookies()"></th>
+                <th><input type="text" class="player-name-input" id="n5" value="Player 5" onchange="saveToCookies()"></th>
+            </tr>
+        </thead>
+        <tbody id="scoreBody"></tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td>Total</td>
+                <td id="t1">0</td><td id="t2">0</td><td id="t3">0</td><td id="t4">0</td><td id="t5">0</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="btn-group">
+        <button id="addBtn" class="btn-add" onclick="addRound()">Add Round</button>
+        <button class="btn-reset" onclick="resetGame()">New Game</button>
+    </div>
+</div>
+
+<script>
+    let rounds = [];
+    const MAX_ROUNDS = 10;
+
+    window.onload = () => {
+        const savedData = getCookie("cb_game_data");
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            rounds = data.rounds || [];
+            for(let i=1; i<=5; i++) document.getElementById('n'+i).value = data.names[i-1];
+            rebuildTable();
+        } else {
+            addRound();
+        }
+    };
+
+    function addRound() {
+        if (rounds.length >= MAX_ROUNDS) return;
+        
+        const newRound = { bids: [1,1,1,1,1], wins: [0,0,0,0,0] };
+        rounds.push(newRound);
+        rebuildTable();
+        saveToCookies();
+    }
+
+    function updateValue(roundIdx, playerIdx, type, val) {
+        rounds[roundIdx][type][playerIdx] = parseFloat(val) || 0;
+        calculateTotals();
+        saveToCookies();
+    }
+
+    function calculateTotals() {
+        let totals = [0,0,0,0,0];
+        rounds.forEach(r => {
+            for(let i=0; i<5; i++) {
+                if(r.wins[i] >= r.bids[i]) {
+                    totals[i] += r.bids[i] + ((r.wins[i] - r.bids[i]) * 0.1);
+                } else {
+                    totals[i] -= r.bids[i];
+                }
+            }
+        });
+
+        let maxScore = Math.max(...totals);
+        for(let i=0; i<5; i++) {
+            const el = document.getElementById(`t${i+1}`);
+            el.innerText = totals[i].toFixed(1);
+            el.classList.toggle('winner', totals[i] === maxScore && maxScore !== 0);
+        }
+    }
+
+    function rebuildTable() {
+        const body = document.getElementById('scoreBody');
+        body.innerHTML = '';
+        rounds.forEach((r, rIdx) => {
+            const tr = document.createElement('tr');
+            let html = `<td>${rIdx + 1}</td>`;
+            for(let pIdx=0; pIdx<5; pIdx++) {
+                html += `<td>
+                    B: <input type="number" value="${r.bids[pIdx]}" onchange="updateValue(${rIdx}, ${pIdx}, 'bids', this.value)"><br>
+                    W: <input type="number" value="${r.wins[pIdx]}" onchange="updateValue(${rIdx}, ${pIdx}, 'wins', this.value)">
+                </td>`;
+            }
+            tr.innerHTML = html;
+            body.appendChild(tr);
+        });
+        
+        document.getElementById('roundTracker').innerText = `Round: ${rounds.length} / ${MAX_ROUNDS}`;
+        document.getElementById('addBtn').disabled = rounds.length >= MAX_ROUNDS;
+        calculateTotals();
+    }
+
+    function saveToCookies() {
+        const names = [1,2,3,4,5].map(i => document.getElementById('n'+i).value);
+        const data = { rounds, names };
+        document.cookie = "cb_game_data=" + JSON.stringify(data) + "; max-age=" + (60*60*24*7) + "; path=/";
+    }
+
+    function getCookie(name) {
+        let value = "; " + document.cookie;
+        let parts = value.split("; " + name + "=");
+        if (parts.length == 2) return parts.pop().split(";").shift();
+    }
+
+    function resetGame() {
+        if(confirm("Start fresh? This clears all cookies.")) {
+            document.cookie = "cb_game_data=; max-age=0; path=/";
+            location.reload();
+        }
+    }
+</script>
+
+</body>
+</html>
