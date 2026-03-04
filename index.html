@@ -3,146 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Callbreak 10-Round Counter</title>
+    <title>Callbreak 5-Player Pro | 10 Rounds</title>
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; color: var(--primary); }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        h2 { text-align: center; margin-bottom: 10px; }
-        .round-info { text-align: center; font-weight: bold; color: var(--accent); margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+        :root { 
+            --primary: #2c3e50; 
+            --accent: #3498db; 
+            --success: #27ae60; 
+            --danger: #e74c3c; 
+            --gold: #f1c40f;
+        }
+
+        /* FIX: Background covers everything even when content grows */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background-attachment: fixed;
+            background-size: cover;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            color: var(--primary);
+        }
+
+        .container { 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 2rem; 
+            border-radius: 15px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
+            width: 100%; 
+            max-width: 1000px; 
+            height: fit-content;
+            margin-bottom: 50px;
+        }
+
+        h2 { text-align: center; color: var(--primary); margin-top: 0; }
+        
+        .round-tracker {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 15px;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        
         th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-        th { background: var(--accent); color: white; }
-        .player-name-input { background: transparent; border: none; color: white; text-align: center; font-weight: bold; width: 80px; border-bottom: 1px dashed #fff; }
-        input[type="number"] { width: 45px; padding: 3px; border: 1px solid #ccc; border-radius: 4px; }
-        .total-row { background: #f8f9fa; font-size: 1.1rem; font-weight: bold; }
-        .winner { background: #ffd700 !important; color: #000; transition: 0.5s; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { cursor: pointer; border: none; border-radius: 8px; padding: 12px; font-weight: bold; transition: 0.2s; }
-        .btn-add { background: var(--success); color: white; }
-        .btn-reset { background: var(--danger); color: white; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        th { background-color: var(--accent); color: white; }
+
+        .player-name-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid rgba(255,255,255,0.5);
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            width: 90%;
+            outline: none;
+        }
+
+        input[type="number"] {
+            width: 45px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .total-row { background-color: #f8f9fa; font-weight: bold; font-size: 1.1rem; }
+        
+        .winner-cell { 
+            background-color: var(--gold) !important; 
+            color: #000; 
+            position: relative;
+        }
+        
+        .winner-cell::after { content: " 👑"; }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-add { background-color: var(--success); color: white; }
+        .btn-add:hover { background-color: #219150; }
+        .btn-add:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        .btn-reset { background-color: var(--danger); color: white; }
+        .btn-reset:hover { background-color: #c0392b; }
+
+        .score-box { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .label { font-size: 10px; color: #7f8c8d; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Callbreak 5-Player Pro</h2>
-    <div class="round-info" id="roundTracker">Round: 1 / 10</div>
+    <h2>Callbreak 5-Player Scoreboard</h2>
+    <div class="round-tracker" id="roundDisp">Round: 1 / 10</div>
     
-    <table id="scoreTable">
-        <thead>
-            <tr>
-                <th>Rnd</th>
-                <th><input type="text" class="player-name-input" id="n1" value="Player 1" onchange="saveToCookies()"></th>
-                <th><input type="text" class="player-name-input" id="n2" value="Player 2" onchange="saveToCookies()"></th>
-                <th><input type="text" class="player-name-input" id="n3" value="Player 3" onchange="saveToCookies()"></th>
-                <th><input type="text" class="player-name-input" id="n4" value="Player 4" onchange="saveToCookies()"></th>
-                <th><input type="text" class="player-name-input" id="n5" value="Player 5" onchange="saveToCookies()"></th>
-            </tr>
-        </thead>
-        <tbody id="scoreBody"></tbody>
-        <tfoot>
-            <tr class="total-row">
-                <td>Total</td>
-                <td id="t1">0</td><td id="t2">0</td><td id="t3">0</td><td id="t4">0</td><td id="t5">0</td>
-            </tr>
-        </tfoot>
-    </table>
+    <div class="table-responsive">
+        <table id="mainTable">
+            <thead>
+                <tr>
+                    <th>Rnd</th>
+                    <th><input type="text" class="player-name-input" id="p1" value="Player 1" onchange="saveData()"></th>
+                    <th><input type="text" class="player-name-input" id="p2" value="Player 2" onchange="saveData()"></th>
+                    <th><input type="text" class="player-name-input" id="p3" value="Player 3" onchange="saveData()"></th>
+                    <th><input type="text" class="player-name-input" id="p4" value="Player 4" onchange="saveData()"></th>
+                    <th><input type="text" class="player-name-input" id="p5" value="Player 5" onchange="saveData()"></th>
+                </tr>
+            </thead>
+            <tbody id="scoreBody">
+                </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td>Total</td>
+                    <td id="t1">0.0</td>
+                    <td id="t2">0.0</td>
+                    <td id="t3">0.0</td>
+                    <td id="t4">0.0</td>
+                    <td id="t5">0.0</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 
     <div class="btn-group">
-        <button id="addBtn" class="btn-add" onclick="addRound()">Add Round</button>
+        <button id="addBtn" class="btn-add" onclick="addNewRound()">+ Next Round</button>
         <button class="btn-reset" onclick="resetGame()">New Game</button>
     </div>
 </div>
 
 <script>
-    let rounds = [];
+    let gameState = {
+        names: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"],
+        rounds: [] 
+    };
     const MAX_ROUNDS = 10;
 
+    // On Page Load
     window.onload = () => {
-        const savedData = getCookie("cb_game_data");
-        if (savedData) {
-            const data = JSON.parse(savedData);
-            rounds = data.rounds || [];
-            for(let i=1; i<=5; i++) document.getElementById('n'+i).value = data.names[i-1];
-            rebuildTable();
+        const saved = getCookie("callbreak_data");
+        if (saved) {
+            gameState = JSON.parse(saved);
+            // Restore Names
+            for(let i=0; i<5; i++) {
+                document.getElementById(`p${i+1}`).value = gameState.names[i];
+            }
+            renderTable();
         } else {
-            addRound();
+            addNewRound();
         }
     };
 
-    function addRound() {
-        if (rounds.length >= MAX_ROUNDS) return;
-        
-        const newRound = { bids: [1,1,1,1,1], wins: [0,0,0,0,0] };
-        rounds.push(newRound);
-        rebuildTable();
-        saveToCookies();
+    function addNewRound() {
+        if (gameState.rounds.length < MAX_ROUNDS) {
+            gameState.rounds.push({
+                bids: [1, 1, 1, 1, 1],
+                wins: [0, 0, 0, 0, 0]
+            });
+            renderTable();
+            saveData();
+        }
     }
 
-    function updateValue(roundIdx, playerIdx, type, val) {
-        rounds[roundIdx][type][playerIdx] = parseFloat(val) || 0;
+    function updateScore(rIdx, pIdx, field, value) {
+        gameState.rounds[rIdx][field][pIdx] = parseFloat(value) || 0;
         calculateTotals();
-        saveToCookies();
+        saveData();
+    }
+
+    function renderTable() {
+        const body = document.getElementById('scoreBody');
+        body.innerHTML = '';
+
+        gameState.rounds.forEach((round, rIdx) => {
+            const tr = document.createElement('tr');
+            let rowHtml = `<td>${rIdx + 1}</td>`;
+            
+            for (let pIdx = 0; pIdx < 5; pIdx++) {
+                rowHtml += `
+                    <td>
+                        <div class="score-box">
+                            <span class="label">Bid</span>
+                            <input type="number" value="${round.bids[pIdx]}" onchange="updateScore(${rIdx}, ${pIdx}, 'bids', this.value)">
+                            <span class="label">Win</span>
+                            <input type="number" value="${round.wins[pIdx]}" onchange="updateScore(${rIdx}, ${pIdx}, 'wins', this.value)">
+                        </div>
+                    </td>`;
+            }
+            tr.innerHTML = rowHtml;
+            body.appendChild(tr);
+        });
+
+        document.getElementById('roundDisp').innerText = `Round: ${gameState.rounds.length} / ${MAX_ROUNDS}`;
+        document.getElementById('addBtn').disabled = gameState.rounds.length >= MAX_ROUNDS;
+        calculateTotals();
     }
 
     function calculateTotals() {
-        let totals = [0,0,0,0,0];
-        rounds.forEach(r => {
-            for(let i=0; i<5; i++) {
-                if(r.wins[i] >= r.bids[i]) {
-                    totals[i] += r.bids[i] + ((r.wins[i] - r.bids[i]) * 0.1);
+        let totals = [0, 0, 0, 0, 0];
+        
+        gameState.rounds.forEach(round => {
+            for (let i = 0; i < 5; i++) {
+                let b = round.bids[i];
+                let w = round.wins[i];
+                if (w >= b) {
+                    totals[i] += b + ((w - b) * 0.1);
                 } else {
-                    totals[i] -= r.bids[i];
+                    totals[i] -= b;
                 }
             }
         });
 
-        let maxScore = Math.max(...totals);
-        for(let i=0; i<5; i++) {
-            const el = document.getElementById(`t${i+1}`);
-            el.innerText = totals[i].toFixed(1);
-            el.classList.toggle('winner', totals[i] === maxScore && maxScore !== 0);
+        let high = Math.max(...totals);
+        for (let i = 0; i < 5; i++) {
+            const cell = document.getElementById(`t${i+1}`);
+            cell.innerText = totals[i].toFixed(1);
+            // Highlight winner if game has started
+            cell.classList.remove('winner-cell');
+            if (high > 0 && totals[i] === high) {
+                cell.classList.add('winner-cell');
+            }
         }
     }
 
-    function rebuildTable() {
-        const body = document.getElementById('scoreBody');
-        body.innerHTML = '';
-        rounds.forEach((r, rIdx) => {
-            const tr = document.createElement('tr');
-            let html = `<td>${rIdx + 1}</td>`;
-            for(let pIdx=0; pIdx<5; pIdx++) {
-                html += `<td>
-                    B: <input type="number" value="${r.bids[pIdx]}" onchange="updateValue(${rIdx}, ${pIdx}, 'bids', this.value)"><br>
-                    W: <input type="number" value="${r.wins[pIdx]}" onchange="updateValue(${rIdx}, ${pIdx}, 'wins', this.value)">
-                </td>`;
-            }
-            tr.innerHTML = html;
-            body.appendChild(tr);
-        });
-        
-        document.getElementById('roundTracker').innerText = `Round: ${rounds.length} / ${MAX_ROUNDS}`;
-        document.getElementById('addBtn').disabled = rounds.length >= MAX_ROUNDS;
-        calculateTotals();
-    }
-
-    function saveToCookies() {
-        const names = [1,2,3,4,5].map(i => document.getElementById('n'+i).value);
-        const data = { rounds, names };
-        document.cookie = "cb_game_data=" + JSON.stringify(data) + "; max-age=" + (60*60*24*7) + "; path=/";
+    function saveData() {
+        for(let i=0; i<5; i++) {
+            gameState.names[i] = document.getElementById(`p${i+1}`).value;
+        }
+        document.cookie = "callbreak_data=" + JSON.stringify(gameState) + "; max-age=" + (60*60*24*7) + "; path=/";
     }
 
     function getCookie(name) {
-        let value = "; " + document.cookie;
-        let parts = value.split("; " + name + "=");
-        if (parts.length == 2) return parts.pop().split(";").shift();
+        let nameEQ = name + "=";
+        let ca = document.cookie.split(';');
+        for(let i=0;i < ca.length;i++) {
+            let c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
     }
 
     function resetGame() {
-        if(confirm("Start fresh? This clears all cookies.")) {
-            document.cookie = "cb_game_data=; max-age=0; path=/";
+        if (confirm("Reset everything and start a new game?")) {
+            document.cookie = "callbreak_data=; max-age=0; path=/";
             location.reload();
         }
     }
